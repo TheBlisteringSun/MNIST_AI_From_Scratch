@@ -64,16 +64,17 @@ def dReLu(array, a):
 
 
 def Forward_Propogation(training_indexes, w1, b1, w2, b2, w3, b3):  # Forward Prop
-    a1s, a2s, a3s = [], [], []
+    a1s, a2s, a3s, Ps = [], [], [], []
     for index in training_indexes:
         input_layer, number = x_test[index], y_test[index]
         a1s.append(ReLu(np.dot(w1, input_layer) + b1))
         a2s.append(ReLu(np.dot(w2, a1s[-1]) + b2))
         a3s.append(ReLu(np.dot(w3, a2s[-1]) + b3))
-    return a1s, a2s, a3s
+        Ps.append(a3s[-1] / sum(a3s[-1]))  # Percentage
+    return a1s, a2s, a3s, Ps
 
 
-def Backward_Propagation(training_indexes, w1, b1, a1s, w2, b2, a2s, w3, b3, a3s):
+def Backward_Propagation(training_indexes, w1, b1, a1s, w2, b2, a2s, w3, b3, a3s, Ps):
     # Back Prop
     # q#, v#, p# are the partial derivatives of a#, w#, b# respectively
     cost = np.zeros((10,))
@@ -82,7 +83,8 @@ def Backward_Propagation(training_indexes, w1, b1, a1s, w2, b2, a2s, w3, b3, a3s
         expected_output[y_test[index]] = 1  # One-Hot Encoding
         squarer = lambda x: x ** 2
 
-        q3 = 2 * (a3s[a_index] - expected_output)
+        dPs = 2 * (Ps[a_index] - expected_output)
+        q3 = np.array(list(map(lambda x: sum(a3s[a_index] - x) / sum(a3s[a_index]) ** 2, a3s[a_index]))) * dPs  # dC/da3
         dead3, dead2, dead1 = np.where(a3s[a_index] == 0), np.where(a2s[a_index] == 0), np.where(a1s[a_index] == 0)
 
         v3, p3 = np.array([i * a2s[a_index] for i in q3]), np.copy(q3)
@@ -104,7 +106,7 @@ def Backward_Propagation(training_indexes, w1, b1, a1s, w2, b2, a2s, w3, b3, a3s
         np.add(gw3, v3, out=gw3)
         np.add(gb3, p3, out=gb3)
 
-        cost += squarer(a3s[a_index] - expected_output)
+        cost += squarer(Ps[a_index] - expected_output)
     return sum(cost)
 
 
@@ -135,8 +137,8 @@ costs = []
 for _ in range(5):
     training_sets = Shuffling_Dataset(len(y_test), 2000)
     for i in range(len(y_test)//len(training_sets[0])):
-        a1s, a2s, a3s = Forward_Propogation(training_sets[i], w1, b1, w2, b2, w3, b3)
-        cost = Backward_Propagation(training_sets[i], w1, b1, a1s, w2, b2, a2s, w3, b3, a3s)
+        a1s, a2s, a3s, Ps = Forward_Propogation(training_sets[i], w1, b1, w2, b2, w3, b3)
+        cost = Backward_Propagation(training_sets[i], w1, b1, a1s, w2, b2, a2s, w3, b3, a3s, Ps)
         w1, b1, w2, b2, w3, b3 = Gradient_Decent(learning_rate, len(training_sets[i]), w1, b1, w2, b2, w3, b3, gw1,
                                                  gb1, gw2, gb2, gw3, gb3)
         costs.append(cost)
