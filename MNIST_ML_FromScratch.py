@@ -28,16 +28,6 @@ y_test = np.stack(y_test)
 x_train = x_train.reshape((len(x_train), 784))
 x_test = x_test.reshape((len(x_test), 784))
 
-#
-# Initializing weights & biasis
-#
-
-w1 = np.random.rand(20, 784)
-b1 = np.random.rand(20)
-w2 = np.random.rand(20, 20)
-b2 = np.random.rand(20)
-w3 = np.random.rand(10, 20)
-b3 = np.random.rand(10)
 
 # Gradient Initialization
 
@@ -47,6 +37,25 @@ gw2 = np.zeros((20, 20))
 gb2 = np.zeros((20,))
 gw3 = np.zeros((10, 20))
 gb3 = np.zeros((10,))
+
+def Initializing():
+    if input("Do you want to upload your weights and biases? [Y]\n").upper() == "Y":
+        wbz = np.load(input("What is the file path to the .npz file with weights and biases?\n"))
+        w1 = wbz["w1"]
+        b1 = wbz["b1"]
+        w2 = wbz["w2"]
+        b2 = wbz["b2"]
+        w3 = wbz["w3"]
+        b3 = wbz["b3"]
+    else:
+        # Initializing weights & biasis
+        w1 = np.random.rand(20, 784)
+        b1 = np.random.rand(20)
+        w2 = np.random.rand(20, 20)
+        b2 = np.random.rand(20)
+        w3 = np.random.rand(10, 20)
+        b3 = np.random.rand(10)
+    return w1, b1, w2, b2, w3, b3
 
 
 def ReLu(array):
@@ -133,8 +142,10 @@ def Gradient_Decent(l_r, datalen, w1, b1, w2, b2, w3, b3, gw1, gb1, gw2, gb2, gw
 
 
 learning_rate = -1e-10
+num_epochs = 5
 costs = []
-for _ in range(5):
+w1, b1, w2, b2, w3, b3 = Initializing()
+for epoch in range(num_epochs):
     training_sets = Shuffling_Dataset(len(y_test), 2000)
     for i in range(len(y_test)//len(training_sets[0])):
         a1s, a2s, a3s, Ps = Forward_Propogation(training_sets[i], w1, b1, w2, b2, w3, b3)
@@ -142,6 +153,9 @@ for _ in range(5):
         w1, b1, w2, b2, w3, b3 = Gradient_Decent(learning_rate, len(training_sets[i]), w1, b1, w2, b2, w3, b3, gw1,
                                                  gb1, gw2, gb2, gw3, gb3)
         costs.append(cost)
+
+    if epoch % max(num_epochs // 20, 1) == 0:  # Progress Percentage
+        print(f"Progress: {round(epoch / num_epochs, 2) * 100}%")
 
 print(f"{costs[0] = }, {costs[-1] = }, {min(costs) = }")
 # print(w1, b1, w2, b2, w3, b3)
