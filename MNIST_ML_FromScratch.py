@@ -93,7 +93,7 @@ def Backward_Propagation(training_indexes, w1, b1, a1s, w2, b2, a2s, w3, b3, a3s
         squarer = lambda x: x ** 2
 
         dPs = 2 * (Ps[a_index] - expected_output)
-        q3 = np.array(list(map(lambda x: sum(a3s[a_index] - x) / sum(a3s[a_index]) ** 2, a3s[a_index]))) * dPs  # dC/da3
+        q3 = np.array(list(map(lambda x: (sum(a3s[a_index]) - x) / sum(a3s[a_index]) ** 2, a3s[a_index]))) * dPs  # dC/da3
         dead3, dead2, dead1 = np.where(a3s[a_index] == 0), np.where(a2s[a_index] == 0), np.where(a1s[a_index] == 0)
 
         v3, p3 = np.array([i * a2s[a_index] for i in q3]), np.copy(q3)
@@ -124,7 +124,7 @@ def Shuffling_Dataset(datalen, chunk_size):  # Returns chunks of random indexes
     indexs = [i for i in range(datalen)]
     random.shuffle(indexs)
     for i in range(datalen // chunk_size):
-        chunks.append(indexs[i:i + chunk_size])
+        chunks.append(indexs[chunk_size*i:chunk_size*(i+1)])
     if datalen % chunk_size != 0:
         chunks.append(indexs[-datalen % chunk_size:])
     return chunks
@@ -141,12 +141,12 @@ def Gradient_Decent(l_r, datalen, w1, b1, w2, b2, w3, b3, gw1, gb1, gw2, gb2, gw
     return nw1, nb1, nw2, nb2, nw3, nb3
 
 
-learning_rate = -1e-10
-num_epochs = 5
+learning_rate = -1e-3
+num_epochs = 10
 costs = []
 w1, b1, w2, b2, w3, b3 = Initializing()
 for epoch in range(num_epochs):
-    training_sets = Shuffling_Dataset(len(y_test), 2000)
+    training_sets = Shuffling_Dataset(len(y_test), 10000)
     for i in range(len(y_test)//len(training_sets[0])):
         a1s, a2s, a3s, Ps = Forward_Propogation(training_sets[i], w1, b1, w2, b2, w3, b3)
         cost = Backward_Propagation(training_sets[i], w1, b1, a1s, w2, b2, a2s, w3, b3, a3s, Ps)
