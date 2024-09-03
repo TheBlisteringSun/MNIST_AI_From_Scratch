@@ -29,15 +29,6 @@ x_train = x_train.reshape((len(x_train), 784))
 x_test = x_test.reshape((len(x_test), 784))
 
 
-# Gradient Initialization
-
-gw1 = np.zeros((20, 784))
-gb1 = np.zeros((20,))
-gw2 = np.zeros((20, 20))
-gb2 = np.zeros((20,))
-gw3 = np.zeros((10, 20))
-gb3 = np.zeros((10,))
-
 def Initializing():
     if input("Do you want to upload your weights and biases? [Y]\n").upper() == "Y":
         wbz = np.load(input("What is the file path to the .npz file with weights and biases?\n"))
@@ -56,6 +47,10 @@ def Initializing():
         w3 = np.random.rand(10, 20)
         b3 = np.random.rand(10)
     return w1, b1, w2, b2, w3, b3
+
+
+def Initializing_Gradient(shapes):
+    return [np.zeros(shape) for shape in shapes]
 
 
 def ReLu(array):
@@ -141,16 +136,21 @@ def Gradient_Decent(l_r, datalen, w1, b1, w2, b2, w3, b3, gw1, gb1, gw2, gb2, gw
     return nw1, nb1, nw2, nb2, nw3, nb3
 
 
-learning_rate = -1e-3
-num_epochs = 10
+learning_rate = -1e1
+num_epochs = 100
+batch_size = 10000
 costs = []
-w1, b1, w2, b2, w3, b3 = Initializing()
+w1, b1, w2, b2, w3, b3 = Initializing()  # Initializing weights and biases
 for epoch in range(num_epochs):
-    training_sets = Shuffling_Dataset(len(y_test), 10000)
-    for i in range(len(y_test)//len(training_sets[0])):
+    training_sets = Shuffling_Dataset(len(y_test), batch_size)
+    for i in range(len(y_test)//batch_size):
+        # Initializing the gradient
+        gw1, gb1, gw2, gb2, gw3, gb3 = Initializing_Gradient(
+            [w1.shape, b1.shape, w2.shape, b2.shape, w3.shape, b3.shape])
+
         a1s, a2s, a3s, Ps = Forward_Propogation(training_sets[i], w1, b1, w2, b2, w3, b3)
         cost = Backward_Propagation(training_sets[i], w1, b1, a1s, w2, b2, a2s, w3, b3, a3s, Ps)
-        w1, b1, w2, b2, w3, b3 = Gradient_Decent(learning_rate, len(training_sets[i]), w1, b1, w2, b2, w3, b3, gw1,
+        w1, b1, w2, b2, w3, b3 = Gradient_Decent(learning_rate, batch_size, w1, b1, w2, b2, w3, b3, gw1,
                                                  gb1, gw2, gb2, gw3, gb3)
         costs.append(cost)
 
