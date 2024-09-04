@@ -67,13 +67,25 @@ def dReLu(array, a):
     return np.array(out)
 
 
+def LeekyReLu(array):
+    output = np.copy(array)
+    output[array < 0] *= 0.01
+    return output
+
+
+def dLeekyReLu(array):
+    derivatives = np.ones(array.shape)
+    derivatives[array < 0] = 0.01
+    return derivatives
+
+
 def Forward_Propogation(training_indexes, w1, b1, w2, b2, w3, b3):  # Forward Prop
     a1s, a2s, a3s, Ps = [], [], [], []
     for index in training_indexes:
         input_layer, number = x_test[index], y_test[index]
         a1s.append(ReLu(np.dot(w1, input_layer) + b1))
         a2s.append(ReLu(np.dot(w2, a1s[-1]) + b2))
-        a3s.append(ReLu(np.dot(w3, a2s[-1]) + b3))
+        a3s.append(LeekyReLu(np.dot(w3, a2s[-1]) + b3))
         Ps.append(a3s[-1] / sum(a3s[-1]))  # Percentage
     return a1s, a2s, a3s, Ps
 
@@ -91,17 +103,20 @@ def Backward_Propagation(training_indexes, w1, b1, a1s, w2, b2, a2s, w3, b3, a3s
         q3 = np.array(list(map(lambda x: (sum(a3s[a_index]) - x) / sum(a3s[a_index]) ** 2, a3s[a_index]))) * dPs  # dC/da3
         dead3, dead2, dead1 = np.where(a3s[a_index] == 0), np.where(a2s[a_index] == 0), np.where(a1s[a_index] == 0)
 
-        v3, p3 = np.array([i * a2s[a_index] for i in q3]), np.copy(q3)
-        q2 = np.dot(np.transpose(w3), dReLu(q3, a3s[a_index]))
+        v3, p3 = np.array([i * a2s[a_index] for i in q3]) * dLeekyReLu(a3s[a_index]).reshape((a3s[a_index].shape[0], 1)), np.copy(q3) * dLeekyReLu(a3s[a_index])
+        q2 = np.dot(np.transpose(w3), q3 * dLeekyReLu(a3s[a_index]))
 
         v2, p2 = np.array([i * a1s[a_index] for i in q2]), np.copy(q2)
         q1 = np.dot(np.transpose(w2), dReLu(q2, a2s[a_index]))
 
         v1, p1 = np.array([i * x_test[index] for i in q1]), np.copy(q1)
 
-        v3[dead3] = np.zeros(20)
+        #v3[dead3] = np.zeros(20)
         v2[dead2] = np.zeros(20)
         v1[dead1] = np.zeros(784)
+        #p3[dead3] = 0.0
+        p2[dead2] = 0.0
+        p1[dead1] = 0.0
 
         np.add(gw1, v1, out=gw1)
         np.add(gb1, p1, out=gb1)
@@ -136,7 +151,7 @@ def Gradient_Decent(l_r, datalen, w1, b1, w2, b2, w3, b3, gw1, gb1, gw2, gb2, gw
     return nw1, nb1, nw2, nb2, nw3, nb3
 
 
-learning_rate = -1e1
+learning_rate = -9.9e1
 num_epochs = 100
 batch_size = 10000
 costs = []
@@ -157,8 +172,8 @@ for epoch in range(num_epochs):
     if epoch % max(num_epochs // 20, 1) == 0:  # Progress Percentage
         print(f"Progress: {round(epoch / num_epochs, 2) * 100}%")
 
+print(w1, b1, w2, b2, w3, b3)
 print(f"{costs[0] = }, {costs[-1] = }, {min(costs) = }")
-# print(w1, b1, w2, b2, w3, b3)
 plt.plot(costs)
 plt.show()
 
