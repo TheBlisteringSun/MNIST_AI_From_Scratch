@@ -79,44 +79,32 @@ def dLeekyReLu(array):
     return derivatives
 
 
-def Forward_Propogation(training_indexes, w1, b1, w2, b2, w3, b3):  # Forward Prop
-    a1s, a2s, a3s, Ps = [], [], [], []
+def FeedForwards_BackwardsPropogation(training_indexes, w1, b1, w2, b2, w3, b3):
+    cost = np.zeros((10,))
+    # Feed Forward
     for index in training_indexes:
-        input_layer, number = x_test[index], y_test[index]
-        a1s.append(ReLu(np.dot(w1, input_layer) + b1))
-        a2s.append(ReLu(np.dot(w2, a1s[-1]) + b2))
-        a3s.append(LeekyReLu(np.dot(w3, a2s[-1]) + b3))
-        Ps.append(a3s[-1] / sum(a3s[-1]))  # Percentage
-    return a1s, a2s, a3s, Ps
+        input_layer = x_test[index]
+        a1 = LeekyReLu(np.dot(w1, input_layer) + b1)
+        a2 = LeekyReLu(np.dot(w2, a1) + b2)
+        a3 = LeekyReLu(np.dot(w3, a2) + b3)
+        P = a3 / sum(a3)  # Percentage
 
-
-def Backward_Propagation(training_indexes, w1, b1, a1s, w2, b2, a2s, w3, b3, a3s, Ps):
     # Back Prop
     # q#, v#, p# are the partial derivatives of a#, w#, b# respectively
-    cost = np.zeros((10,))
-    for a_index, index in enumerate(training_indexes):
         expected_output = np.zeros((10))
         expected_output[y_test[index]] = 1  # One-Hot Encoding
-        squarer = lambda x: x ** 2
 
-        dPs = 2 * (Ps[a_index] - expected_output)
-        q3 = np.array(list(map(lambda x: (sum(a3s[a_index]) - x) / sum(a3s[a_index]) ** 2, a3s[a_index]))) * dPs  # dC/da3
-        dead3, dead2, dead1 = np.where(a3s[a_index] == 0), np.where(a2s[a_index] == 0), np.where(a1s[a_index] == 0)
+        dP = 2 * (P - expected_output)
+        q3 = np.array(list(map(lambda x: (sum(a3) - x) / sum(a3) ** 2, a3))) * dP  # dC/da3
 
-        v3, p3 = np.array([i * a2s[a_index] for i in q3]) * dLeekyReLu(a3s[a_index]).reshape((a3s[a_index].shape[0], 1)), np.copy(q3) * dLeekyReLu(a3s[a_index])
-        q2 = np.dot(np.transpose(w3), q3 * dLeekyReLu(a3s[a_index]))
+        v3, p3 = np.array([i * a2 for i in q3]) * dLeekyReLu(a3).reshape((a3.shape[0], 1)), np.copy(q3) * dLeekyReLu(a3)
+        q2 = np.dot(np.transpose(w3), q3 * dLeekyReLu(a3))
 
-        v2, p2 = np.array([i * a1s[a_index] for i in q2]), np.copy(q2)
-        q1 = np.dot(np.transpose(w2), dReLu(q2, a2s[a_index]))
+        v2, p2 = np.array([i * a1 for i in q2]) * dLeekyReLu(a2).reshape((a2.shape[0], 1)), np.copy(q2) * dLeekyReLu(a2)
+        q1 = np.dot(np.transpose(w2), q2 * dLeekyReLu(a2))
 
-        v1, p1 = np.array([i * x_test[index] for i in q1]), np.copy(q1)
+        v1, p1 = np.array([i * x_test[index] for i in q1]) * dLeekyReLu(a1).reshape((a1.shape[0], 1)), np.copy(q1) * dLeekyReLu(a1)
 
-        #v3[dead3] = np.zeros(20)
-        v2[dead2] = np.zeros(20)
-        v1[dead1] = np.zeros(784)
-        #p3[dead3] = 0.0
-        p2[dead2] = 0.0
-        p1[dead1] = 0.0
 
         np.add(gw1, v1, out=gw1)
         np.add(gb1, p1, out=gb1)
@@ -125,7 +113,8 @@ def Backward_Propagation(training_indexes, w1, b1, a1s, w2, b2, a2s, w3, b3, a3s
         np.add(gw3, v3, out=gw3)
         np.add(gb3, p3, out=gb3)
 
-        cost += squarer(Ps[a_index] - expected_output)
+        squarer = lambda x: x ** 2
+        cost += squarer(P - expected_output)
     return sum(cost)
 
 
@@ -151,8 +140,8 @@ def Gradient_Decent(l_r, datalen, w1, b1, w2, b2, w3, b3, gw1, gb1, gw2, gb2, gw
     return nw1, nb1, nw2, nb2, nw3, nb3
 
 
-learning_rate = -9.9e1
-num_epochs = 100
+learning_rate = -3e2
+num_epochs = 10
 batch_size = 10000
 costs = []
 w1, b1, w2, b2, w3, b3 = Initializing()  # Initializing weights and biases
@@ -163,8 +152,7 @@ for epoch in range(num_epochs):
         gw1, gb1, gw2, gb2, gw3, gb3 = Initializing_Gradient(
             [w1.shape, b1.shape, w2.shape, b2.shape, w3.shape, b3.shape])
 
-        a1s, a2s, a3s, Ps = Forward_Propogation(training_sets[i], w1, b1, w2, b2, w3, b3)
-        cost = Backward_Propagation(training_sets[i], w1, b1, a1s, w2, b2, a2s, w3, b3, a3s, Ps)
+        cost = FeedForwards_BackwardsPropogation(training_sets[i], w1, b1, w2, b2, w3, b3)
         w1, b1, w2, b2, w3, b3 = Gradient_Decent(learning_rate, batch_size, w1, b1, w2, b2, w3, b3, gw1,
                                                  gb1, gw2, gb2, gw3, gb3)
         costs.append(cost)
